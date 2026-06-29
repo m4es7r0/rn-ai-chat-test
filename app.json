@@ -2,14 +2,16 @@
   "expo": {
     "name": "rn-ai-chat-test",
     "slug": "rn-ai-chat-test",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.rnaichattest.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +22,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "24111ffb-7442-4603-8aa4-6cb41c544e5f"
+      }
+    },
+    "owner": "test-ai-app"
   }
 }
