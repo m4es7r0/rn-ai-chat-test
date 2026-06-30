@@ -7,7 +7,7 @@ and passed **into** the engine — never hard-coded.
 |---|---|---|
 | `default` | the sent user message pins to the **top**, the reply streams below | normal Q→A, reading the reply from its start |
 | `over` | the user message slides **off the top** by its own height; the reply leads at the top | "show me the answer", the question is implied |
-| `down` | **no repositioning** — the message just appends | casual chat where you don't want the view to jump |
+| `down` | **no top anchor** — append and stick to the **bottom** (scroll into view if off-screen, follow the streaming reply) | casual chat where the newest stays above the input |
 
 `big` in the demo is just `default` plus a long reply from the backend — it
 tests that a tall reply is read top-down and isn't scrolled to its end.
@@ -18,15 +18,34 @@ tests that a tall reply is read top-down and isn't scrolled to its end.
 
 ```ts
 // useChat.ts
-setAnchor(behavior === 'down' ? null : { index: userIndex, hide: behavior === 'over' });
+setAnchor(
+  behavior === 'down'
+    ? { mode: 'bottom' }
+    : { mode: 'top', index: userIndex, hide: behavior === 'over' },
+);
 ```
 
-- `default` → `{ index: userIndex, hide: false }`
-- `over`    → `{ index: userIndex, hide: true }`
-- `down`    → `null`
+- `default` → `{ mode: 'top', index: userIndex, hide: false }`
+- `over`    → `{ mode: 'top', index: userIndex, hide: true }`
+- `down`    → `{ mode: 'bottom' }`
 
 `KeyboardChatList` consumes that directive. The engine has no `if (over)`
-branches sprinkled through it — the behavior is data.
+branches sprinkled through it — the behavior is data. A new object is set per
+send, so the list reacts (and scrolls) even when the same behavior repeats.
+
+## `down` — follow the bottom
+
+`down` uses no top anchor. The list instead **sticks to the bottom**:
+
+- On send, it `scrollToEnd` once, so a message that landed off-screen comes into
+  view above the input.
+- `maintainScrollAtEnd` then follows the streaming reply as it grows, keeping the
+  newest content above the input — but only while you're near the bottom, so
+  scrolling up to read history isn't interrupted.
+- Crucially, `down` disables LegendList's **data-change anchoring**
+  (`maintainVisibleContentPosition={{ data: false }}`). With it on (the `top`
+  default), adding the reply re-anchors an earlier item and the just-sent message
+  visibly jumps up — exactly the bug this avoids.
 
 ## The anchor math (`blankSpace`)
 

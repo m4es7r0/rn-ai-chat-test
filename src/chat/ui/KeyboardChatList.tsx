@@ -52,16 +52,23 @@ export function KeyboardChatList({
   const combinedRef = useCombinedRef<LegendListRef>(listRef, innerRef);
   const blankSpace = useSharedValue(0);
 
-  const anchorIndex = anchor?.index;
-  const hideAnchor = anchor?.hide ?? false;
+  const top = anchor?.mode === 'top' ? anchor : null;
+  const anchorIndex = top?.index;
+  const hideAnchor = top?.hide ?? false;
+  // 'down': no top anchor — just stick to the bottom as content is added/grows.
+  const followBottom = anchor?.mode === 'bottom';
 
   // Reserve exactly enough bottom inset so the anchored item sits at the top:
   // blankSpace = viewportHeight - (heights from anchor to end). For 'over' we
   // add the anchored bubble's own height so it scrolls fully off the top.
   const calculateTopItemInset = useCallback(() => {
     if (anchorIndex === undefined || anchorIndex < 0) {
-      blankSpace.value = 0;
-      innerRef.current?.reportContentInset(null);
+      // Not anchoring (e.g. 'down'). Clear once; don't re-clear on every metrics
+      // tick while the reply streams.
+      if (blankSpace.value !== 0) {
+        blankSpace.value = 0;
+        innerRef.current?.reportContentInset(null);
+      }
       return;
     }
     const state = innerRef.current?.getState();
@@ -90,11 +97,18 @@ export function KeyboardChatList({
 
   useEffect(() => calculateTopItemInset(), [calculateTopItemInset]);
 
-  // On a new anchored send, scroll to the end so the inset can pull the anchor
-  // to the top. 'down' (anchor === null) intentionally stays in place.
+  // On every send, scroll to the end:
+  // - top mode: animated, so the blankSpace inset smoothly pulls the anchored
+  //   message to the top.
+  // - bottom mode ('down'): NON-animated. If the message landed off-screen we
+  //   want it to snap up above the input deterministically (like the inset does
+  //   for 'top'); an animated scroll here races the non-animated
+  //   maintainScrollAtEnd follow and produces the up/down jitter. Both instant =
+  //   no competition. extraContentPadding keeps the result above the input.
   useEffect(() => {
     if (!anchor) return;
-    const id = setTimeout(() => innerRef.current?.scrollToEnd({ animated: true }), 60);
+    const animated = anchor.mode !== 'bottom';
+    const id = setTimeout(() => innerRef.current?.scrollToEnd({ animated }), 60);
     return () => clearTimeout(id);
   }, [anchor]);
 
@@ -121,7 +135,16 @@ export function KeyboardChatList({
       contentContainerStyle={contentContainerStyle}
       style={style}
       initialScrollAtEnd
-      maintainVisibleContentPosition
+      // top mode keeps full stabilization (incl. data-change anchoring) so the
+      // anchored message holds while the reply streams. bottom mode disables
+      // data-change anchoring (it caused the message to jump up) and instead
+      // sticks to the end via maintainScrollAtEnd.
+      maintainVisibleContentPosition={followBottom ? { data: false } : true}
+      // Follow the streaming reply WITHOUT animation. An animated follow fires a
+      // new scroll animation per token; they stack and fight, which makes the
+      // bubble jitter up/down and burns frames. A non-animated pin is instant
+      // and cheap.
+      maintainScrollAtEnd={followBottom ? { animated: false } : false}
       renderScrollComponent={renderScroll}
       onMetricsChange={onMetricsChange}
       onItemSizeChanged={onItemSizeChanged}

@@ -58,7 +58,9 @@ export function useChat({ backend, initialMessages = [] }: UseChatOptions): UseC
       // SendBehavior -> positioning directive. New object identity each time so
       // the list reacts even if the same behavior repeats.
       setAnchor(
-        behavior === 'down' ? null : { index: userIndex, hide: behavior === 'over' },
+        behavior === 'down'
+          ? { mode: 'bottom' }
+          : { mode: 'top', index: userIndex, hide: behavior === 'over' },
       );
 
       const userMessage: ChatMessage = {

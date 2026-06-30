@@ -26,12 +26,13 @@ export type LiftBehavior = 'always' | 'whenAtEnd' | 'persistent' | 'never';
 
 /**
  * Positioning directive consumed by KeyboardChatList. Derived from SendBehavior
- * by useChat — UI layers don't build it by hand.
- * - index: the message that should be glued to the top.
- * - hide:  also push that message off the top by its own height (for 'over').
- * - null:  no anchoring ('down').
+ * by useChat — UI layers don't build it by hand. A new object per send so the
+ * list always reacts.
+ * - { mode: 'top', index, hide } — glue a message to the top (default/over).
+ *     hide: also push it off the top by its own height (for 'over').
+ * - { mode: 'bottom' } — no top anchor; just follow the bottom so the newest
+ *     content stays visible above the input (down).
  */
-export interface ChatAnchor {
-  index: number;
-  hide: boolean;
-}
+export type ChatAnchor =
+  | { mode: 'top'; index: number; hide: boolean }
+  | { mode: 'bottom' };
